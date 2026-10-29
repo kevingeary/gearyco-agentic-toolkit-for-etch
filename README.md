@@ -1,6 +1,6 @@
 # Gearyco Agentic Toolkit for Etch
 
-An agent workspace for building sites in [Etch](https://etchbuilder.io) with AI coding tools (Cursor, Claude Code, Codex, Copilot and others). Agents read `AGENTS.md`, follow the linked docs in `agent-docs/`, and drive a live Etch tab through a shared kit of builders, upserts and audits.
+An agent workspace for building sites in [Etch](https://etchbuilder.io) with [Automatic.css](https://automaticcss.com) and AI coding tools (Cursor, Claude Code, Codex, Copilot and others). Agents read `AGENTS.md`, follow the linked docs in `agent-docs/`, and drive a live Etch tab through a shared kit of builders, upserts and audits.
 
 > **Unofficial.** This toolkit is built on top of [`@digital-gravy/etch-connector`](https://www.npmjs.com/package/@digital-gravy/etch-connector). It is not the official Etch Connector and is not affiliated with Digital Gravy or Etch.
 
