@@ -1,0 +1,16 @@
+# Client sites stay private; only the example project is shared.
+projects/*
+!projects/example/
+
+# Local working files
+output/
+Archive.zip
+package-lock.json
+node_modules/
+.wrangler/
+.fallow/
+.DS_Store
+
+# ACSS settings exports
+acss-import.json
+acss-export.json
