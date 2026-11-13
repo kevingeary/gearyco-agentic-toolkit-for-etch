@@ -33,3 +33,7 @@ Route segment: {this.fields.slug}
 - Assign the collection in the same step as the upload: pass `--collection <id>` to `etch-connector upload`, or call `etch.assets.updateAsync(id, { collectionIds: [collectionId] })` straight after `uploadAsync`.
 - `etch.assets.createCollectionAsync(name)` takes the name as a plain string.
 - After uploading, confirm with `etch.assets.listAsync()` that no asset has an empty `collectionIds`.
+
+## Block scripts
+
+A block's `script.code` is plain JavaScript source. Never `btoa()` it: Studio's static export ships `code` verbatim inside a `<script type="module">`, so base64 becomes a syntax error and the script silently never runs.

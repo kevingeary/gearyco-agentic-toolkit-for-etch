@@ -63,6 +63,15 @@ width are styled globally. Don't redeclare them unless intentionally deviating.
 Spacing is **gap-first**; layouts are **mobile-first**; sizing tokens are already
 responsive (clamp-based), so breakpoints are rarely needed for sizing.
 
+## Rich content (`.smart-spacing`)
+
+Every wrapper around rich content (post bodies, WYSIWYG/`{this.content}` output,
+long-form prose with headings, paragraphs, lists, blockquotes, figures) gets the
+ACSS `.smart-spacing` class alongside its BEM class, e.g.
+`class="article__body smart-spacing"`. It handles all vertical spacing between
+the rich content's children. Don't add `gap`, `display: flex/grid` or margins
+to space those children yourself. Details: `agent-docs/acss/spacing.md`.
+
 ## CSS reset
 
 A reset is already provided (`@layer etch-reset`). Do not write reset-related CSS
@@ -122,6 +131,7 @@ Do
 - `max-inline-size: var(--width-60)` (logical properties)
 - `border: var(--border); border-radius: var(--radius)`
 - BEM class names; `btn--primary` for buttons
+- `.smart-spacing` on every rich content wrapper (`article__body smart-spacing`)
 
 Don't
 - `padding: 40px`, `color: #1a1a1a`, `grid-template-columns: repeat(3, 1fr)`
@@ -131,3 +141,4 @@ Don't
 - Manual padding on section elements / random container `max-width`
 - `font-size` on headings/text unless intentionally deviating
 - Reset-related CSS (already provided)
+- Hand-spacing rich content children with `gap`, flex/grid or margins (use `.smart-spacing`)

@@ -40,6 +40,14 @@ Only use margin rarely when it doesn't make sense to use gap or when gap was use
 
 You can still use the gap tokens with the margin property in scenarios where it makes sense to do so.
 
+## Rich Content (`.smart-spacing`)
+
+All rich content uses the ACSS utility class `.smart-spacing`, which automatically handles all spacing for rich content (headings, paragraphs, lists, blockquotes, figures, etc.). Rich content means any block of long-form or editor-generated content: blog post bodies, `{this.content}` output, WYSIWYG fields, legal pages.
+
+- Add `.smart-spacing` to the element that wraps the rich content, alongside its BEM class: `class="article__body smart-spacing"`.
+- Do not space the rich content's children manually. No `gap`, no `display: flex`/`grid` for vertical rhythm, no margins on headings or paragraphs inside it.
+- The gap-first workflow still applies to layout around the rich content wrapper; `.smart-spacing` only governs spacing inside it.
+
 ## Padding
 
 Padding should never use contextual gap tokens. Always use normal spacing tokens.

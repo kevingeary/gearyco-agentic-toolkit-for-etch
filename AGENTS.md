@@ -15,13 +15,23 @@ The user doesn't need to paste connector commands. When a request touches Etch, 
 
 1. **Check for tabs.** Run `npx @digital-gravy/etch-connector tabs --quiet`. Each line starts with a connected tab's name.
 2. **Start the connector if needed.** If it can't reach the connector daemon, start `npx @digital-gravy/etch-connector serve` as a background process that keeps running for the session (never in the foreground, where it blocks), then check tabs again.
-3. **Connect a tab if none is listed.** Ask the user to open Etch Settings and enable the AI Connector, then open a builder page and click the AI button in the left sidebar. That registers the tab under the site name; they don't need to name it. Check tabs again once they confirm.
+3. **No tab listed? Work via the Etch Studio MCP.** Don't stop to ask the user to connect a tab; switch to the Etch Studio MCP server and follow "Working via the Etch Studio MCP" below instead of steps 4–7. Only if that MCP isn't available, ask the user to open Etch Settings and enable the AI Connector, then open a builder page and click the AI button in the left sidebar (that registers the tab under the site name), and check tabs again once they confirm.
 4. **Use the bridge by default.** Don't ask the user to choose a backend. Switch to CDP (`--cdp`) only when you need screenshots, rendered HTML or computed styles, and ask first: it needs Chrome started with `--remote-debugging-port`.
 5. **Match the tab to a project.** Use the project whose `projects/<project>/etch/etch.json` names the tab. If several tabs are connected, use the one the request names, or ask. If an existing project's tab was renamed, update its `etch.json`. If no project matches, ask whether it's a new site; if so, copy `projects/example/` to `projects/<site-name>/` and set `tab` in its `etch.json`.
 6. **Read the runtime rules.** Run `npx @digital-gravy/etch-connector tabs` once without `--quiet` and read the authoring rules it prints for the tab before writing scripts.
 7. **Confirm the connection** with `node shared-helpers/run.mjs <project> -e "return etch.apiVersion"`, then start on the request.
 
 If the connection drops mid-session, start again from step 1.
+
+## Working via the Etch Studio MCP (no connector tab)
+
+When no Etch Connector tab is available, drive Etch through the Etch Studio MCP server, which runs its own headless builder:
+
+1. **Read its guide.** Call `get_guide` once per session before writing scripts.
+2. **Open the project.** Call `list_projects`, then `open_project { tenant, project }`, and pass the returned handle to every later call. Match it to `projects/<project>/` by site name, or ask.
+3. **Take control if needed.** If `open_project` reports someone else has the project open, ask the user before calling `request_control`. If the only other session is the user's own tab, just call it. Taking control reloads the builder, so do it before editing.
+4. **Run scripts with `eval`.** The script body runs with `etch` in scope; return compact summaries. The shared runner doesn't apply here, so inline any kit helpers you need from `shared-helpers/etch/` and the project's `helpers.js`. All hard rules below still apply.
+5. **Save explicitly.** Edits live only in memory until `await etch.saveAsync()`, and are lost after about 10 idle minutes. When finished, call `close_project { handle, save: true }` (or `hand_over_control` if staying open) and tell the user what was saved.
 
 ## Hard rules (always apply)
 

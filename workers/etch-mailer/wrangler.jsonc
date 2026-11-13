@@ -1,0 +1,14 @@
+{
+	"name": "etch-mailer",
+	"main": "src/index.js",
+	"compatibility_date": "2026-10-01",
+	// Internal only: reached through service bindings, never over HTTP.
+	"workers_dev": false,
+	"preview_urls": false,
+	"send_email": [{ "name": "EMAIL" }],
+	"vars": {
+		// Comma-separated sender domains this mailer may send from (must be onboarded to Email Sending).
+		"ALLOWED_FROM_DOMAINS": "geary.co"
+	},
+	"observability": { "enabled": true }
+}
