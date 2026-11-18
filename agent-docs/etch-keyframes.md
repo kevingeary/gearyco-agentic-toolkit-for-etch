@@ -16,7 +16,7 @@ Apply these rules whenever you add or edit CSS `@keyframes` in Etch.
 
 ## Finding or creating the Animations stylesheet
 
-When driving Etch via the connector:
+When driving Etch via MCP `eval` or the connector (or use the kit's `addKeyframes(name, body)`, which does all of this):
 
 ```javascript
 let sheet = etch.stylesheets.list().find((s) => s.name === "Animations");

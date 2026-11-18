@@ -3,11 +3,11 @@
 
 // return task(async () => { …; return summary; })
 const task = async (fn) => {
-  etch.ai.setState('working');
+  etch.ai?.setState?.('working');
   try {
     return await fn();
   } finally {
-    etch.ai.setState('thinking');
+    etch.ai?.setState?.('thinking');
   }
 };
 

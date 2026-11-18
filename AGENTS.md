@@ -7,39 +7,45 @@ It is tool-agnostic: follow it regardless of which assistant or editor you use
 ## Environment
 
 - Etch (A visual development environment for WordPress and frontend projects, accessible via the connected browser window. It provides real-time editing, preview, and site management in a web-based UI.)
-- The Etch Connector (`npx @digital-gravy/etch-connector`) is the bridge between you and a live Etch tab. The runner (`shared-helpers/run.mjs`) calls it for you.
+- There are two ways to reach Etch. Use the **Etch MCP server** first; fall back to the **Etch Connector** only when MCP is not available.
+  - **Etch MCP server** (`https://studio.etchbuilder.io/mcp`, registered as `etch` in `.cursor/mcp.json`; your tool may list it under another name such as `etch-studio`). It opens an Etch Studio project in a headless builder of your own and exposes tools such as `list_projects`, `open_project`, `get_guide`, `eval`, `screenshot`, `upload_assets` and `close_project`. No shell, daemon or browser tab needed.
+  - **Etch Connector** (`npx @digital-gravy/etch-connector`), the bridge to a live Etch tab in the user's browser. The runner (`shared-helpers/run.mjs`) calls it for you. Use it when no Etch MCP server is available (tool doesn't support MCP, server not configured, authentication fails) or when the site isn't an Etch Studio project the MCP can open (for example an Etch site on WordPress).
 
 ## Getting started (before any Etch work)
 
-The user doesn't need to paste connector commands. When a request touches Etch, set up the connection yourself:
+The user doesn't need to paste commands. When a request touches Etch, set up the connection yourself. Pick the backend once per session, in this order, and tell the user which one you're using.
+
+### 1. MCP first
+
+1. **Check for the server.** See whether an Etch MCP server's tools (`list_projects`, `open_project`, `eval`, …) are available to you. If none are, go to the connector fallback.
+2. **List projects.** Call `list_projects`. If the server needs authentication, authenticate it once and retry. If it still fails or errors, go to the connector fallback.
+3. **Match the project.** Use the local project whose `projects/<project>/etch/etch.json` has a matching `mcp` entry (`{ "tenant": "…", "project": "…" }`), or whose `tab` matches the Studio project's name. If several fit, use the one the request names, or ask. If the site isn't in `list_projects`, it isn't reachable over MCP: go to the connector fallback. If no local project matches, ask whether it's a new site; if so, copy `projects/example/` to `projects/<site-name>/` and set `mcp` (and `tab`, if known) in its `etch.json`. Add a missing `mcp` entry to an existing project's `etch.json` once it's confirmed.
+4. **Open it.** Call `open_project { tenant, project }` and keep the returned handle for every later call. If someone else has the project open, follow the server's instructions (`request_control`, or `force: true` on older servers), and ask the user first unless the only other session is theirs. Taking control reloads the builder and drops unsaved changes, so do it before editing.
+5. **Read the guide.** Call `get_guide` once and read it before writing scripts. It replaces the connector's runtime rules.
+6. **Confirm the connection** with `eval { handle, code: "return etch.apiVersion" }`, then start on the request.
+7. **Save and close.** Edits live only in the headless builder until `await etch.saveAsync()`, and are lost if it idles out (about 10 minutes without a call). Save after each finished step, and when done call `close_project { handle, save: true }` (or `hand_over_control` to stay open) unless the user said not to save. Tell the user what was saved.
+
+If the MCP handle expires or a call says the project isn't open, call `open_project` again; unsaved edits are gone, so re-run the task script.
+
+### 2. Connector fallback
 
 1. **Check for tabs.** Run `npx @digital-gravy/etch-connector tabs --quiet`. Each line starts with a connected tab's name.
 2. **Start the connector if needed.** If it can't reach the connector daemon, start `npx @digital-gravy/etch-connector serve` as a background process that keeps running for the session (never in the foreground, where it blocks), then check tabs again.
-3. **No tab listed? Work via the Etch Studio MCP.** Don't stop to ask the user to connect a tab; switch to the Etch Studio MCP server and follow "Working via the Etch Studio MCP" below instead of steps 4–7. Only if that MCP isn't available, ask the user to open Etch Settings and enable the AI Connector, then open a builder page and click the AI button in the left sidebar (that registers the tab under the site name), and check tabs again once they confirm.
+3. **Connect a tab if none is listed.** You only get here when MCP isn't available, so ask the user to open Etch Settings and enable the AI Connector, then open a builder page and click the AI button in the left sidebar. That registers the tab under the site name; they don't need to name it. Check tabs again once they confirm.
 4. **Use the bridge by default.** Don't ask the user to choose a backend. Switch to CDP (`--cdp`) only when you need screenshots, rendered HTML or computed styles, and ask first: it needs Chrome started with `--remote-debugging-port`.
 5. **Match the tab to a project.** Use the project whose `projects/<project>/etch/etch.json` names the tab. If several tabs are connected, use the one the request names, or ask. If an existing project's tab was renamed, update its `etch.json`. If no project matches, ask whether it's a new site; if so, copy `projects/example/` to `projects/<site-name>/` and set `tab` in its `etch.json`.
 6. **Read the runtime rules.** Run `npx @digital-gravy/etch-connector tabs` once without `--quiet` and read the authoring rules it prints for the tab before writing scripts.
 7. **Confirm the connection** with `node shared-helpers/run.mjs <project> -e "return etch.apiVersion"`, then start on the request.
 
-If the connection drops mid-session, start again from step 1.
-
-## Working via the Etch Studio MCP (no connector tab)
-
-When no Etch Connector tab is available, drive Etch through the Etch Studio MCP server, which runs its own headless builder:
-
-1. **Read its guide.** Call `get_guide` once per session before writing scripts.
-2. **Open the project.** Call `list_projects`, then `open_project { tenant, project }`, and pass the returned handle to every later call. Match it to `projects/<project>/` by site name, or ask.
-3. **Take control if needed.** If `open_project` reports someone else has the project open, ask the user before calling `request_control`. If the only other session is the user's own tab, just call it. Taking control reloads the builder, so do it before editing.
-4. **Run scripts with `eval`.** The script body runs with `etch` in scope; return compact summaries. The shared runner doesn't apply here, so inline any kit helpers you need from `shared-helpers/etch/` and the project's `helpers.js`. All hard rules below still apply.
-5. **Save explicitly.** Edits live only in memory until `await etch.saveAsync()`, and are lost after about 10 idle minutes. When finished, call `close_project { handle, save: true }` (or `hand_over_control` if staying open) and tell the user what was saved.
+If the connection drops mid-session, start again from step 1 of the fallback.
 
 ## Hard rules (always apply)
 
-EVERY change goes through the public etch.* API — no exceptions, in
-either backend. NEVER reach into the canvas: no document/DOM manipulation, no editing canvas
+EVERY change goes through the public etch.* API — no exceptions, whether
+you're on MCP, the connector bridge or CDP. NEVER reach into the canvas: no document/DOM manipulation, no editing canvas
 elements or iframes directly. Styling ALWAYS goes through Etch's styling
 system: etch.styles.* for selectors/classes, etch.blocks.addClass() to apply
-them, etch.stylesheets.* for global CSS. cdp's page access is for inspecting
+them, etch.stylesheets.* for global CSS. The MCP `screenshot` tool and cdp's page access are for inspecting
 (shot, html, computed) — never for writing.
 
 - Do not wrap entire pages in any sort of wrapper. Sections should be the top level element.
@@ -57,12 +63,12 @@ them, etch.stylesheets.* for global CSS. cdp's page access is for inspecting
 
 ## Bridge scripts
 
-- Run every bridge script through the shared runner, from the workspace root:
-  `node shared-helpers/run.mjs <project> <task.js>` or `node shared-helpers/run.mjs <project> -e "return task(siteAudit)"`.
-  It prepends the shared kit (`shared-helpers/etch/`) and the project's `helpers.js`, checks syntax locally, runs `etch-connector eval` against the tab named in `projects/<project>/etch/etch.json`, and prints the decoded result.
+- The same task scripts run on both backends. Build every script with the shared runner, from the workspace root. It prepends the shared kit (`shared-helpers/etch/`) and the project's `helpers.js` and checks syntax locally.
+  - **On MCP:** `node shared-helpers/run.mjs <project> <task.js> --print` (or `-e "return task(siteAudit)" --print`) prints the joined script. Pass that output verbatim as `code` to the MCP `eval` tool with your handle. Its result comes back as `{ ok, value, error, logs }`. For a short read that needs no kit helpers (`return etch.apiVersion`), call `eval` directly.
+  - **On the connector:** `node shared-helpers/run.mjs <project> <task.js>` or `node shared-helpers/run.mjs <project> -e "return task(siteAudit)"` also runs `etch-connector eval` against the tab named in `projects/<project>/etch/etch.json` and prints the decoded result.
 - Use the kit's builders, upserts and audits (`el`, `section`, `instance`, `applyStyles`, `upsertComponent`, `buildPage`, `upsertRoute`, `siteAudit`, …). Never redefine them in a project; a project's `helpers.js` holds only site-specific code.
 - Write task scripts so they can be re-run (find-or-create, then update), wrap them in `task()`, and return compact summaries rather than block trees or raw data.
-- Parallel agents are fine on different projects (each `etch.json` names its own tab). Never run two agents' scripts against the same tab at once: navigation and saves apply to whatever document that tab has open.
+- Parallel agents are fine on different projects (each `etch.json` names its own tab or MCP project). Never run two agents' scripts against the same tab at once: navigation and saves apply to whatever document that tab has open. On MCP each agent gets its own headless builder, but only one may hold editing control and the last save wins, so don't have two agents edit the same Studio project at once either.
 - Keep only scripts worth re-running in the project folder. Run one-off fixes with `-e` or a temp file outside the workspace.
 - The kit loads only for projects that have an `etch.json`. Projects without one haven't been migrated: they run with their own `helpers.js`, and need `-t "<tab>"`. To migrate, strip the generic code from `helpers.js`, add `etch.json`, and run `--check` on each script.
 - Full reference: `agent-docs/etch-shared-helpers.md`. Add a helper to the kit only when it's useful across projects and has been run against a live site.
@@ -72,8 +78,8 @@ them, etch.stylesheets.* for global CSS. cdp's page access is for inspecting
 Some rules only apply in certain situations. Before doing related work, open and
 follow the linked file:
 
-- **Bridge scripts:** Before writing or running any `etch.*` script, read
-  `agent-docs/etch-shared-helpers.md`.
+- **Bridge scripts:** Before writing or running any `etch.*` script (over MCP
+  or the connector), read `agent-docs/etch-shared-helpers.md`.
 - **Etch Studio sites:** Before adding content fields, creating or assigning
   templates, or uploading assets, read `agent-docs/etch-studio.md` (slug fields,
   the `index` template, asset collections).

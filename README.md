@@ -26,9 +26,9 @@ Everything in `projects/` except `example/` is ignored by git, so client work st
 
 ## Quick start
 
-Open the folder in your AI coding tool and tell it what you want to work on, e.g. "let's work on my site". The agent follows the getting-started routine in `AGENTS.md`: it starts the connector, asks you to connect your Etch tab, and sets up a project folder for a new site.
+Open the folder in your AI coding tool and tell it what you want to work on, e.g. "let's work on my site". The agent follows the getting-started routine in `AGENTS.md`. It uses the Etch MCP server first (`.cursor/mcp.json` registers `https://studio.etchbuilder.io/mcp`): it lists your Etch Studio projects, opens the right one in a headless builder, and sets up a project folder for a new site. If your tool has no MCP support, the server isn't connected, or the site isn't an Etch Studio project, it falls back to the connector: it starts it and asks you to connect your Etch tab.
 
-Your only manual step is connecting the tab: in Etch, enable the AI Connector in Settings, then click the AI button in the builder's left sidebar.
+On MCP, your only manual step may be signing in when the server first asks. On the connector, it's connecting the tab: in Etch, enable the AI Connector in Settings, then click the AI button in the builder's left sidebar.
 
 ### Running it by hand
 

@@ -1,10 +1,10 @@
 # Shared Etch helpers
 
-`shared-helpers/` holds the project-agnostic toolkit for driving Etch over the connector. Use it for every bridge script instead of writing builders, upserts or audits again.
+`shared-helpers/` holds the project-agnostic toolkit for driving Etch, over the Etch MCP server (preferred) or the connector (fallback). Use it for every bridge script instead of writing builders, upserts or audits again.
 
 ```text
 shared-helpers/
-├── run.mjs          runner: joins kit + project prelude + task, checks syntax, runs eval, decodes output
+├── run.mjs          runner: joins kit + project prelude + task, checks syntax, then prints it (MCP) or runs eval (connector)
 └── etch/
     ├── blocks.js    block and prop builders
     ├── upsert.js    create-or-update helpers, task() wrapper
@@ -13,12 +13,31 @@ shared-helpers/
 
 ## Running scripts
 
-Run from the workspace root:
+Run from the workspace root.
+
+### Over MCP (preferred)
+
+Build the script with `--print`, then pass the output verbatim as `code` to the MCP `eval` tool, with the handle from `open_project`:
+
+```bash
+node shared-helpers/run.mjs <project> <task.js> [more.js …] --print
+node shared-helpers/run.mjs <project> -e "return task(siteAudit)" --print
+```
+
+- `--print` runs the same syntax check, then writes the joined script to stdout instead of sending it. It needs no tab and no connector.
+- `eval` returns `{ ok, value, error, logs }`; `value` is what the script returned. Its `timeoutMs` caps at 120000.
+- Each `eval` call is a fresh function scope, so send the kit with every call that uses it; nothing defined in one call survives to the next.
+- MCP edits are not persisted until `await etch.saveAsync()`. The build helpers that save (`replaceTree`, `buildPage`, `buildTemplate`) already call it; after `applyStyles` or other `etch.*` writes, save in the same script or a follow-up `eval`. Close with `close_project { handle, save: true }` when done.
+- For screenshots, use the MCP `screenshot` tool (optionally with a CSS `selector`) instead of CDP.
+
+### Over the connector (fallback)
 
 ```bash
 node shared-helpers/run.mjs <project> <task.js> [more.js …]
 node shared-helpers/run.mjs <project> -e "return task(siteAudit)"
 ```
+
+### Runner details
 
 - `<project>` is a folder name under `projects/` (or any path). Task files are looked up in the project's `etch/` folder first, then relative to the current directory.
 - The script sent to Etch is, in order: the three kit files, the project prelude, then the task files and any `-e` snippets. Everything shares one scope, so later files can use anything defined earlier.
@@ -29,18 +48,20 @@ node shared-helpers/run.mjs <project> -e "return task(siteAudit)"
   - `--timeout <ms>` defaults to 120000.
   - `--kit` / `--no-kit` force the kit on or off. By default it loads only when the project has an `etch.json`.
   - `--check` only runs the local syntax check; it catches duplicate declarations and typos without a round trip to Etch.
+  - `--print` prints the joined script for the MCP `eval` tool instead of running it.
 
 Per-project settings live in `projects/<project>/etch/etch.json`:
 
 ```json
 {
   "tab": "My Site",
+  "mcp": { "tenant": "my-workspace", "project": "my-site" },
   "kit": true,
   "prelude": ["helpers.js"]
 }
 ```
 
-Only `tab` is required; `kit` defaults to `true` once the file exists. Projects without an `etch.json` haven't been migrated: the runner skips the kit, uses their own `helpers.js`, and needs `-t "<tab>"`.
+`mcp` holds the `tenant` and `project` values to pass to `open_project` (as returned by `list_projects`); the runner ignores it. `tab` is needed only for the connector. `kit` defaults to `true` once the file exists. Projects without an `etch.json` haven't been migrated: the runner skips the kit, uses their own `helpers.js`, and needs `-t "<tab>"`.
 
 ## Project helpers
 
@@ -87,7 +108,7 @@ return task(async () => {
 
 | Helper | Does |
 | --- | --- |
-| `task(fn)` | Runs `fn` with the AI working state; returns its result |
+| `task(fn)` | Runs `fn` with the AI working state (when the builder has one); returns its result |
 | `upsertStyle(selector, css)`, `applyStyles({ selector: css })` | Create or update selectors (call `etch.saveAsync()` unless a build helper below saves) |
 | `deleteStyles([selectors])` | Remove selectors; returns the ones deleted |
 | `addKeyframes(name, body)` | Append to the global **Animations** stylesheet, creating it if needed; skips existing names |

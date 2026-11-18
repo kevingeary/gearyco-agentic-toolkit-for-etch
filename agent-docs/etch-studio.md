@@ -30,7 +30,8 @@ Route segment: {this.fields.slug}
 - Every uploaded asset must belong to a collection. Never leave an asset uncollected.
 - Before uploading, list the existing collections with `etch.assets.listCollectionsAsync()` and reuse a matching one. Only create a collection when none fits.
 - Group by what the asset is, using plural names: `Fonts`, `Graphics` (decorative SVGs, patterns, textures), `Icons`, `Logos`, `Photos`, `Documents`.
-- Assign the collection in the same step as the upload: pass `--collection <id>` to `etch-connector upload`, or call `etch.assets.updateAsync(id, { collectionIds: [collectionId] })` straight after `uploadAsync`.
+- Upload files from disk with the MCP `upload_assets` tool when MCP is connected (run the command it returns, exactly as given); fall back to `etch-connector upload` otherwise.
+- Assign the collection in the same step as the upload: pass `collectionId` to `upload_assets` or `--collection <id>` to `etch-connector upload`, or call `etch.assets.updateAsync(id, { collectionIds: [collectionId] })` straight after `uploadAsync`.
 - `etch.assets.createCollectionAsync(name)` takes the name as a plain string.
 - After uploading, confirm with `etch.assets.listAsync()` that no asset has an empty `collectionIds`.
 

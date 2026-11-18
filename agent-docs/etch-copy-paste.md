@@ -1,7 +1,7 @@
 # Cross-Site Copy & Paste
 
 Apply these rules whenever you copy blocks, sections, or components from one Etch
-tab/site to another (including via etch-connector).
+tab/site to another (via the Etch MCP server or etch-connector).
 
 ## Hard rules
 
@@ -24,7 +24,10 @@ memory. The public API changes; training data and stale docs are unreliable.
 
 1. Injected Etch documentation chunks (if available in context).
 2. Context7 — query for the blocks copy/paste API for Etch.
-3. A connected tab — probe what exists on `etch.blocks` before writing a script:
+3. A live builder — probe what exists on `etch.blocks` before writing a script.
+   Over MCP, call `eval` on an open handle with
+   `return Object.keys(etch.blocks).filter(k => /copy|paste/i.test(k)).sort();`.
+   Over the connector:
 
 ```bash
 npx @digital-gravy/etch-connector eval -t TAB \
@@ -34,7 +37,27 @@ npx @digital-gravy/etch-connector eval -t TAB \
 If you cannot confirm the API, say so — do not fall back to a custom migration
 script.
 
-## Cross-tab workflow (etch-connector)
+## Cross-project workflow (Etch MCP, preferred)
+
+When both sites are Etch Studio projects in `list_projects`:
+
+1. **Open both** — `open_project` for the source and the destination; keep both
+   handles.
+2. **Verify** copy/paste methods on one handle (see above).
+3. **Find the block** on the source handle (`getTree()`, `find()`, or structure name).
+4. **Copy** with `eval` on the source handle — call the documented copy method
+   and return the payload.
+5. **Paste** with `eval` on the destination handle — embed that payload in the
+   `code` and pass it to the documented paste method.
+6. **Save the destination.** Nobody sees the headless builder, so an unsaved
+   paste is lost when it closes. Close the destination with
+   `close_project { handle, save: true }` unless the user said not to save, and
+   close the source with `save: false`.
+
+If either site isn't reachable over MCP (not in `list_projects`, or MCP isn't
+connected), use the connector workflow below for both.
+
+## Cross-tab workflow (etch-connector, fallback)
 
 When source and destination are different connected tabs:
 
@@ -68,4 +91,5 @@ Only escalate manually if paste fails or the user asks:
 - Use `getJson()` + `create()` + manual `addClass()` loops for cross-site section
   migration.
 - Duplicate API signatures or behavioral claims from external docs into this file.
-- Call `etch.saveAsync()` unless the user explicitly asks to save.
+- Call `etch.saveAsync()` on a connector tab unless the user explicitly asks to
+  save. (On MCP, save the destination as described above.)

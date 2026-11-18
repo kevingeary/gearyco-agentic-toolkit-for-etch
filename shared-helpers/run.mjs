@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// node shared-helpers/run.mjs <project> [task.js …] [-e "code"] [-t tab] [--timeout ms] [--no-kit] [--check]
+// node shared-helpers/run.mjs <project> [task.js …] [-e "code"] [-t tab] [--timeout ms] [--no-kit] [--check] [--print]
 //
 // Joins the shared kit, the project's prelude (helpers.js by default) and the task files into one
 // script, checks its syntax locally, runs it with `etch-connector eval`, and prints the decoded result.
+// --print outputs the joined script instead of running it, for the Etch MCP eval tool's `code`.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync, statSync } from 'node:fs';
@@ -15,12 +16,12 @@ const ROOT = resolve(HERE, '..');
 const KIT = ['blocks.js', 'upsert.js', 'audit.js'].map((f) => join(HERE, 'etch', f));
 
 const usage = () => {
-  console.error('usage: run.mjs <project> [task.js …] [-e "code"] [-t tab] [--timeout ms] [--no-kit] [--check]');
+  console.error('usage: run.mjs <project> [task.js …] [-e "code"] [-t tab] [--timeout ms] [--no-kit] [--check] [--print]');
   process.exit(2);
 };
 
 const args = process.argv.slice(2);
-const opts = { files: [], inline: [], timeout: 120000, kit: undefined, check: false, tab: undefined };
+const opts = { files: [], inline: [], timeout: 120000, kit: undefined, check: false, print: false, tab: undefined };
 let project;
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
@@ -30,6 +31,7 @@ for (let i = 0; i < args.length; i++) {
   else if (a === '--no-kit') opts.kit = false;
   else if (a === '--kit') opts.kit = true;
   else if (a === '--check') opts.check = true;
+  else if (a === '--print') opts.print = true;
   else if (a === '-h' || a === '--help') usage();
   else if (project === undefined) project = a;
   else opts.files.push(a);
@@ -75,6 +77,10 @@ try {
 }
 if (opts.check) {
   console.log(`ok: ${parts.map((p) => p.label).join(' + ')}`);
+  process.exit(0);
+}
+if (opts.print) {
+  process.stdout.write(code);
   process.exit(0);
 }
 if (!tab) {
